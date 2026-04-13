@@ -15,7 +15,8 @@ import (
 )
 
 const (
-	allOpen = "0.0.0.0/0"
+	allOpenIPv4 = "0.0.0.0/0"
+	allOpenIPv6 = "::/0"
 )
 
 type UpdateClusterVersionOpts struct {
@@ -167,7 +168,7 @@ func UpdateClusterPublicAccessSources(ctx context.Context, opts *UpdateClusterPu
 			&eks.UpdateClusterConfigInput{
 				Name: aws.String(opts.Config.Spec.DisplayName),
 				ResourcesVpcConfig: &ekstypes.VpcConfigRequest{
-					PublicAccessCidrs: getPublicAccessCidrs(opts.Config.Spec.PublicAccessSources),
+					PublicAccessCidrs: getPublicAccessCidrs(opts.Config.Spec.PublicAccessSources, opts.Config.Spec.IPFamily),
 				},
 			},
 		)
@@ -278,8 +279,17 @@ func filterPublicAccessSources(sources []string) []string {
 	if len(sources) == 0 {
 		return nil
 	}
-	if len(sources) == 1 && sources[0] == allOpen {
+	if len(sources) == 1 && (sources[0] == allOpenIPv4 || sources[0] == allOpenIPv6) {
 		return nil
 	}
+	if len(sources) == 2 {
+		hasIPv4 := sources[0] == allOpenIPv4 || sources[1] == allOpenIPv4
+		hasIPv6 := sources[0] == allOpenIPv6 || sources[1] == allOpenIPv6
+
+		if hasIPv4 && hasIPv6 {
+			return nil
+		}
+	}
+
 	return sources
 }
