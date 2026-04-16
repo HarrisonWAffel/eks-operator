@@ -430,6 +430,7 @@ var _ = Describe("UpdateClusterPublicAccessSources", func() {
 		updateClusterPublicAccessSourcesOpts.Config.Spec.PublicAccessSources = []string{}
 		updateClusterPublicAccessSourcesOpts.Config.Spec.IPFamily = aws.String("ipv6")
 		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.PublicAccessSources = []string{"0.0.0.0/0", "::/0"}
+		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.IPFamily = aws.String("ipv6")
 		updated, err := UpdateClusterPublicAccessSources(ctx, updateClusterPublicAccessSourcesOpts)
 		Expect(updated).To(BeFalse())
 		Expect(err).NotTo(HaveOccurred())
@@ -439,6 +440,7 @@ var _ = Describe("UpdateClusterPublicAccessSources", func() {
 		updateClusterPublicAccessSourcesOpts.Config.Spec.PublicAccessSources = []string{}
 		updateClusterPublicAccessSourcesOpts.Config.Spec.IPFamily = aws.String("ipv6")
 		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.PublicAccessSources = []string{"0.0.0.0/0"}
+		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.IPFamily = aws.String("ipv6")
 
 		eksServiceMock.EXPECT().UpdateClusterConfig(ctx,
 			&eks.UpdateClusterConfigInput{

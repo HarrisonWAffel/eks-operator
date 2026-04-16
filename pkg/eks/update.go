@@ -11,6 +11,7 @@ import (
 
 	eksv1 "github.com/rancher/eks-operator/pkg/apis/eks.cattle.io/v1"
 	"github.com/rancher/eks-operator/pkg/eks/services"
+	"github.com/rancher/eks-operator/templates"
 	"github.com/rancher/eks-operator/utils"
 )
 
@@ -159,8 +160,8 @@ func UpdateClusterPublicAccessSources(ctx context.Context, opts *UpdateClusterPu
 	updated := false
 	// check public access CIDRs for update (public access sources)
 
-	filteredSpecPublicAccessSources := filterPublicAccessSources(opts.Config.Spec.PublicAccessSources)
-	filteredUpstreamPublicAccessSources := filterPublicAccessSources(opts.UpstreamClusterSpec.PublicAccessSources)
+	filteredSpecPublicAccessSources := filterPublicAccessSources(opts.Config.Spec.PublicAccessSources, opts.Config.Spec.IPFamily)
+	filteredUpstreamPublicAccessSources := filterPublicAccessSources(opts.UpstreamClusterSpec.PublicAccessSources, opts.UpstreamClusterSpec.IPFamily)
 	if !utils.CompareStringSliceElements(filteredSpecPublicAccessSources, filteredUpstreamPublicAccessSources) {
 		logrus.Infof("Updating public access source config to %v  for cluster [%s (id: %s)]", opts.Config.Spec.PublicAccessSources, opts.Config.Spec.DisplayName, opts.Config.Name)
 		logrus.Debugf("config: %v, upstream: %v", opts.Config.Spec.PublicAccessSources, opts.UpstreamClusterSpec.PublicAccessSources)
@@ -275,19 +276,25 @@ func getLoggingTypesToEnable(loggingTypes []string, upstreamLoggingTypes []strin
 	return ekstypes.LogSetup{}
 }
 
-func filterPublicAccessSources(sources []string) []string {
+func filterPublicAccessSources(sources []string, ipFamily *string) []string {
 	if len(sources) == 0 {
-		return nil
+		return []string{}
 	}
-	if len(sources) == 1 && (sources[0] == allOpenIPv4 || sources[0] == allOpenIPv6) {
-		return nil
-	}
-	if len(sources) == 2 {
-		hasIPv4 := sources[0] == allOpenIPv4 || sources[1] == allOpenIPv4
-		hasIPv6 := sources[0] == allOpenIPv6 || sources[1] == allOpenIPv6
 
-		if hasIPv4 && hasIPv6 {
-			return nil
+	isIPv6 := templates.IsIPv6(ipFamily)
+
+	if isIPv6 {
+		if len(sources) == 2 {
+			hasIPv4 := sources[0] == allOpenIPv4 || sources[1] == allOpenIPv4
+			hasIPv6 := sources[0] == allOpenIPv6 || sources[1] == allOpenIPv6
+
+			if hasIPv4 && hasIPv6 {
+				return []string{}
+			}
+		}
+	} else {
+		if len(sources) == 1 && sources[0] == allOpenIPv4 {
+			return []string{}
 		}
 	}
 
