@@ -69,7 +69,7 @@ func newClusterInput(config *eksv1.EKSClusterConfig, roleARN string) *eks.Create
 			EndpointPublicAccess:  config.Spec.PublicAccess,
 			SecurityGroupIds:      config.Status.SecurityGroups,
 			SubnetIds:             config.Status.Subnets,
-			PublicAccessCidrs:     getPublicAccessCidrs(config.Spec.PublicAccessSources),
+			PublicAccessCidrs:     getPublicAccessCidrs(config.Spec.PublicAccessSources, config.Spec.IPFamily),
 		},
 		Tags:    getTags(config.Spec.Tags),
 		Logging: getLogging(config.Spec.LoggingTypes),
@@ -454,9 +454,12 @@ func getLogging(loggingTypes []string) *ekstypes.Logging {
 	}
 }
 
-func getPublicAccessCidrs(publicAccessCidrs []string) []string {
+func getPublicAccessCidrs(publicAccessCidrs []string, ipFamily *string) []string {
 	if len(publicAccessCidrs) == 0 {
-		return []string{"0.0.0.0/0"}
+		if templates.IsIPv6(ipFamily) {
+			return []string{allOpenIPv4, allOpenIPv6}
+		}
+		return []string{allOpenIPv4}
 	}
 
 	return publicAccessCidrs

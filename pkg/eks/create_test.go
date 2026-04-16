@@ -110,6 +110,14 @@ var _ = Describe("newClusterInput", func() {
 		Expect(clusterInput.ResourcesVpcConfig.PublicAccessCidrs).ToNot(BeNil())
 		Expect(clusterInput.ResourcesVpcConfig.PublicAccessCidrs).To(Equal([]string{"0.0.0.0/0"}))
 	})
+	It("should successfully create a cluster input with no public access cidrs set for IPv6", func() {
+		config.Spec.PublicAccessSources = []string{}
+		config.Spec.IPFamily = aws.String("ipv6")
+		clusterInput := newClusterInput(config, roleARN)
+		Expect(clusterInput).ToNot(BeNil())
+		Expect(clusterInput.ResourcesVpcConfig.PublicAccessCidrs).ToNot(BeNil())
+		Expect(clusterInput.ResourcesVpcConfig.PublicAccessCidrs).To(Equal([]string{"0.0.0.0/0", "::/0"}))
+	})
 
 	It("should successfully create a cluster with no tags set", func() {
 		config.Spec.Tags = map[string]string{}
