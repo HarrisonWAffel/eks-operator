@@ -426,6 +426,35 @@ var _ = Describe("UpdateClusterPublicAccessSources", func() {
 		Expect(updated).To(BeFalse())
 		Expect(err).NotTo(HaveOccurred())
 	})
+	It("should not update cluster public access sources if using default IPv6 dual-stack CIDRs", func() {
+		updateClusterPublicAccessSourcesOpts.Config.Spec.PublicAccessSources = []string{}
+		updateClusterPublicAccessSourcesOpts.Config.Spec.IPFamily = aws.String("ipv6")
+		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.PublicAccessSources = []string{"0.0.0.0/0", "::/0"}
+		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.IPFamily = aws.String("ipv6")
+		updated, err := UpdateClusterPublicAccessSources(ctx, updateClusterPublicAccessSourcesOpts)
+		Expect(updated).To(BeFalse())
+		Expect(err).NotTo(HaveOccurred())
+	})
+
+	It("should update cluster public access sources to include IPv6 default if missing upstream", func() {
+		updateClusterPublicAccessSourcesOpts.Config.Spec.PublicAccessSources = []string{}
+		updateClusterPublicAccessSourcesOpts.Config.Spec.IPFamily = aws.String("ipv6")
+		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.PublicAccessSources = []string{"0.0.0.0/0"}
+		updateClusterPublicAccessSourcesOpts.UpstreamClusterSpec.IPFamily = aws.String("ipv6")
+
+		eksServiceMock.EXPECT().UpdateClusterConfig(ctx,
+			&eks.UpdateClusterConfigInput{
+				Name: aws.String(updateClusterPublicAccessSourcesOpts.Config.Spec.DisplayName),
+				ResourcesVpcConfig: &ekstypes.VpcConfigRequest{
+					PublicAccessCidrs: []string{"0.0.0.0/0", "::/0"},
+				},
+			},
+		).Return(nil, nil)
+
+		updated, err := UpdateClusterPublicAccessSources(ctx, updateClusterPublicAccessSourcesOpts)
+		Expect(updated).To(BeTrue())
+		Expect(err).NotTo(HaveOccurred())
+	})
 
 	It("should return error if update cluster public access sources failed", func() {
 		eksServiceMock.EXPECT().UpdateClusterConfig(ctx, gomock.Any()).Return(nil, errors.New("error updating cluster config"))
